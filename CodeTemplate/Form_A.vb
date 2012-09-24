@@ -15,7 +15,15 @@
     End Sub
 #End Region
 
+    Private Sub Form_A_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        ' Exeファイル名をフォームのタイトル文字列の先頭に付加する
+        Dim ExeName As String = System.IO.Path.GetFileNameWithoutExtension(Application.ExecutablePath)
+        Me.Text = ExeName & " " & Me.Text
+    End Sub
+
     Private Sub Button1_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button1.Click
         MsgBox("てすと")
     End Sub
+
+
 End Class

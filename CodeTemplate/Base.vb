@@ -1,10 +1,21 @@
-﻿Module Main
+﻿Module Base
 
-    Public myApp As MyAppBase ' VBアプリケーションモデルのオブジェクト
+    Public App As AppBase ' VBアプリケーションモデルのオブジェクト
 
     ' プログラムのエントリポイント
     <STAThread()> _
     Sub Main(ByVal CmdArgs() As String)
+
+        ' プログラムの初期例外処理の設定を行う
+        InitialExceptionHandlingSetup()
+
+        App = New AppBase ' VBアプリケーションモデルの初期化を行う
+        App.Run(CmdArgs) ' アプリケーションを開始する
+
+    End Sub
+
+    ' プログラムの初期例外処理の設定を行う
+    Private Sub InitialExceptionHandlingSetup()
 
         ' Application.ThreadException も UnhandledException で処理するようにモードを変更する
         Windows.Forms.Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException)
@@ -14,9 +25,6 @@
 
         ' アプリケーションドメインの例外集約ハンドラを登録する
         AddHandler System.Threading.Thread.GetDomain.UnhandledException, AddressOf Application_UnhandledException
-
-        myApp = New MyAppBase ' VBアプリケーションモデルの初期化を行う
-        myApp.Run(CmdArgs) ' アプリケーションを開始する
 
     End Sub
 
@@ -40,7 +48,7 @@ End Module
 ''' <remarks>
 ''' Visual Basic アプリケーションモデルを利用するために用意されたクラス
 ''' </remarks>
-Class MyAppBase
+Class AppBase
     Inherits Microsoft.VisualBasic.ApplicationServices.WindowsFormsApplicationBase
 
     Sub New()
@@ -60,7 +68,7 @@ Class MyAppBase
         AddHandler Me.Startup, AddressOf MyAppBase_Startup
 
         ' このアプリケーションのメインとなるFormのインスタンスを設定する
-        Me.MainForm = New Form_A()
+        Me.MainForm = New Form()
 
     End Sub
 
@@ -74,7 +82,7 @@ Class MyAppBase
 
     ' ２重起動されたときに呼ばれる処理
     Private Sub MyAppBase_StartupNextInstance(ByVal sender As Object, ByVal e As Microsoft.VisualBasic.ApplicationServices.StartupNextInstanceEventArgs)
-        ''[概要]
+        ''[処理内容 概要]
         '' ウィンドウをアクティブにして，さらに２重起動されたことを通知する
         ''=====================================================================
 
