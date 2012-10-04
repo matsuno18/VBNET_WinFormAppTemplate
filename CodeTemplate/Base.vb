@@ -1,103 +1,97 @@
-﻿Module Base
+﻿Option Explicit On
+Option Strict On
+Option Compare Binary
+Option Infer On
 
-    Public App As AppBase ' VBアプリケーションモデルのオブジェクト
+''' <summary>
+''' プログラムの基礎部分
+''' </summary>
+''' <remarks>
+''' Mainモジュールと結びついている。
+''' mutex_2ndRun_uuidはプログラム毎に書き換える必要がある。
+''' </remarks>
+Module Base
+
+    ' 2重起動防止用Mutexを一意に識別するためのGUID(他のアプリケーションで使い回さないこと！)
+    Const mutex_2ndRun_uuid As String = "{0DBF1626-EE07-49EF-B356-3799FF1FF2DF}"
 
     ' プログラムのエントリポイント
     <STAThread()> _
     Sub Main(ByVal CmdArgs() As String)
 
-        ' プログラムの初期例外処理の設定を行う
+        ' 未捕捉例外処理ハンドラの初期設定を行う
         InitialExceptionHandlingSetup()
 
-        App = New AppBase ' VBアプリケーションモデルの初期化を行う
-        App.Run(CmdArgs) ' アプリケーションを開始する
+        ' 2重起動防止用のMutexを初期化して，2重起動チェックを行う
+        InitAndCheck_2ndRunMutex() ' 2重起動されていたら，ここで終了する
+
+        ' アプリケーションを開始する
+        Application_Startup()
+
+        ' 2重起動用Mutexを解放する
+        Release_2ndRunMutex()
 
     End Sub
 
-    ' プログラムの初期例外処理の設定を行う
-    Private Sub InitialExceptionHandlingSetup()
+#Region "未捕捉例外 関係"
 
-        ' Application.ThreadException も UnhandledException で処理するようにモードを変更する
-        Windows.Forms.Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException)
+    ' 未捕捉例外処理ハンドラの初期設定を行う
+    Public Sub InitialExceptionHandlingSetup()
 
-        ' メインアプリケーションスレッドの例外集約ハンドラを登録する(上のモード変更のため，これは使われないはず)(サンプルとして残しておく)
-        AddHandler Windows.Forms.Application.ThreadException, AddressOf Application_ThreadException
+        ' メインのUIスレッドで発生した全ての例外に対するイベントハンドラを追加する()
+        AddHandler Application.ThreadException, AddressOf Application_ThreadException
 
-        ' アプリケーションドメインの例外集約ハンドラを登録する
-        AddHandler System.Threading.Thread.GetDomain.UnhandledException, AddressOf Application_UnhandledException
+        ' アプリケーションドメイン内のメインのUIスレッドを除くすべてのスレッドに対してイベントハンドラを追加する
+        AddHandler AppDomain.CurrentDomain.UnhandledException, AddressOf Application_UnhandledException
 
     End Sub
 
-    ' メインアプリケーションスレッドの未捕捉例外処理
+    ' UIスレッドで発生する例外を処理する
     Private Sub Application_ThreadException(ByVal sender As Object, ByVal e As System.Threading.ThreadExceptionEventArgs)
-        MsgBox("メインアプリケーションスレッドで未捕捉の例外が発生しました")
-        System.Environment.Exit(-1)
+        Application_Abort(sender, e)
     End Sub
 
-    ' アプリケーションドメインの未捕捉例外処理
-    Private Sub Application_UnhandledException(ByVal sender As Object, ByVal e As System.UnhandledExceptionEventArgs)
-        MsgBox("未捕捉のエラーが発生しました")
-        System.Environment.Exit(-1)
+    ' UIスレッド以外の例外を処理する
+    Private Sub Application_UnhandledException(ByVal sender As Object, ByVal e As UnhandledExceptionEventArgs)
+        Application_Abort(sender, e)
     End Sub
+
+#End Region
+
+#Region "2重起動防止 関係"
+
+    ' 2重起動防止に使うMutex
+    Private mutex_2ndRun As System.Threading.Mutex
+
+    ''' <summary>
+    ''' 2重起動防止用のMutexを初期化して，2重起動チェックを行う
+    ''' </summary>
+    ''' <remarks>2重起動されていたら，このプログラムは終了する</remarks>
+    Public Sub InitAndCheck_2ndRunMutex()
+
+        ' 所有権を持たない状態でMutexを作成する
+        mutex_2ndRun = New System.Threading.Mutex(False, mutex_2ndRun_uuid)
+
+        ' MutexオブジェクトがGCによって勝手に解放されないようにする
+        System.GC.KeepAlive(mutex_2ndRun)
+
+        ' Mutexの所有権を要求する
+        If Not mutex_2ndRun.WaitOne(0, False) Then
+            ' 所有権を取得できなかった，つまり既に起動されているので終了する
+            MsgBox("既に起動されています")
+            mutex_2ndRun.Close()
+            System.Environment.Exit(1)
+        End If
+
+    End Sub
+
+    ' 2重起動防止用のMutexを解放する
+    Public Sub Release_2ndRunMutex()
+        mutex_2ndRun.ReleaseMutex() ' 所有権を手放す
+        mutex_2ndRun.Close() ' Mutexを解放する
+    End Sub
+
+#End Region
 
 End Module
 
-''' <summary>
-''' 
-''' </summary>
-''' <remarks>
-''' Visual Basic アプリケーションモデルを利用するために用意されたクラス
-''' </remarks>
-Class AppBase
-    Inherits Microsoft.VisualBasic.ApplicationServices.WindowsFormsApplicationBase
-
-    Sub New()
-        '' VBアプリケーションモデルの初期化・設定をする
-        ''=====================================================================
-
-        ' ビジュアルスタイルを有効にする
-        Me.EnableVisualStyles = True
-
-        ' 単一インスタンスのアプリケーションとする
-        Me.IsSingleInstance = True
-
-        ' 上記と関連して，２重起動されたときに呼ばれるイベントを設定する
-        AddHandler Me.StartupNextInstance, AddressOf MyAppBase_StartupNextInstance
-
-        ' 通常起動時に呼ばれるイベントを設定する
-        AddHandler Me.Startup, AddressOf MyAppBase_Startup
-
-        ' このアプリケーションのメインとなるFormのインスタンスを設定する
-        Me.MainForm = New Form()
-
-    End Sub
-
-    ' 通常起動時に呼ばれる処理
-    Private Sub MyAppBase_Startup(ByVal sender As Object, ByVal e As Microsoft.VisualBasic.ApplicationServices.StartupEventArgs)
-
-        ' INIファイルの読み込みなどを記述する
-        ' e.Cancel = True で起動をキャンセルすることが可能
-
-    End Sub
-
-    ' ２重起動されたときに呼ばれる処理
-    Private Sub MyAppBase_StartupNextInstance(ByVal sender As Object, ByVal e As Microsoft.VisualBasic.ApplicationServices.StartupNextInstanceEventArgs)
-        ''[処理内容 概要]
-        '' ウィンドウをアクティブにして，さらに２重起動されたことを通知する
-        ''=====================================================================
-
-        ' ウィンドウのZオーダーを最前面となるように設定する
-        Me.MainForm.BringToFront()
-
-        ' アプリケーションをアクティブにする(アクティブにする対象は自分自身)
-        AppActivate(Process.GetCurrentProcess.Id)
-
-        ' このアプリケーションのメインフォームをアクティブにする
-        Me.MainForm.Activate()
-
-        ' メッセージを表示する
-        MsgBox("２重起動されました！", MsgBoxStyle.Information, "通知")
-
-    End Sub
-
-End Class

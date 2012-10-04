@@ -76,6 +76,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Base.vb" />
+    <Compile Include="Main.vb" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
