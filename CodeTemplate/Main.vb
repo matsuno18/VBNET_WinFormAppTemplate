@@ -57,6 +57,7 @@ Module Main
             Return
         End If
 
+        ' スタックトレースを表示する
         MsgBox(ex.ToString())
 
     End Sub
