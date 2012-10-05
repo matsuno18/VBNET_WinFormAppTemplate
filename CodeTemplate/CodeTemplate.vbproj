@@ -77,7 +77,7 @@
     </Compile>
     <Compile Include="Base.vb" />
     <Compile Include="Main.vb" />
-    <Compile Include="Program.vb" />
+    <Compile Include="Worker.vb" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
