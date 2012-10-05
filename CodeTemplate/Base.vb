@@ -70,6 +70,7 @@ Module Base
     Public Sub InitAndCheck_2ndRunMutex()
 
         ' 所有権を持たない状態でMutexを作成する
+        ' (プロセス境界をまたぐので名前付きシステムMutexとして作成する。ローカルMutexではダメ)
         mutex_2ndRun = New System.Threading.Mutex(False, mutex_2ndRun_uuid)
 
         ' MutexオブジェクトがGCによって勝手に解放されないようにする

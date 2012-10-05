@@ -1,16 +1,20 @@
 ﻿Public Class Worker
 
-    Private uiform As Form_A
-    Private worker_name As String
-
     ' ワーカースレッドを生成して開始する
-    Public Shared Sub StartWorker(ByVal frm As Form_A, ByVal name As String)
+    Public Shared Function StartWorker(ByVal frm As Form_A, ByVal name As String) As System.Threading.Thread
+
         Dim worker As System.Threading.Thread
         Dim pgm As New Worker(frm, name)
 
         worker = New System.Threading.Thread(AddressOf pgm.Startup)
         worker.Start()
-    End Sub
+
+        Return worker
+
+    End Function
+
+    Private uiform As Form_A ' ワーカーと紐づいているフォーム
+    Private worker_name As String ' ワーカースレッドの識別用名称
 
     ' コンストラクタ
     Sub New(ByVal uiform As Form_A, ByVal name As String)
